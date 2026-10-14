@@ -3,6 +3,7 @@ import "#flow/components/ak-flow-card";
 
 import { FlowUserDetails } from "#flow/FormStatic";
 import { BaseStage } from "#flow/stages/base";
+import { globalAK } from "#common/global";
 
 import { AccessDeniedChallenge, FlowChallengeResponseRequest } from "@goauthentik/api";
 
@@ -31,32 +32,69 @@ export class AccessDeniedStage extends BaseStage<
     ];
 
     render(): TemplateResult {
+        const key = "!!AccessDeniedStage:IncompleteProfile!!";
+
+        let errorMessageText = this.challenge?.errorMessage;
+        let icon = "fa-times";
+        let title = msg("Request has been denied.");
+
+        const isProfileIncomplete = errorMessageText?.startsWith(key);
+
+        if (isProfileIncomplete && errorMessageText) {
+            errorMessageText = errorMessageText.slice(key.length);
+            icon = "fa-user-edit";
+            title = msg("Incomplete profile");
+        }
+
         return html`<ak-flow-card .challenge=${this.challenge}>
             <form class="pf-c-form">
                 ${FlowUserDetails({ challenge: this.challenge })}
-                <ak-empty-state icon="fa-times"
-                    ><span>${msg("Request has been denied.")}</span>
+
+                <ak-empty-state icon=${icon}>
+                    <span>${title}</span>
                     ${this.challenge?.errorMessage
                         ? html`
                               <div slot="body">
-                                  <p>${this.challenge?.errorMessage}</p>
+                                  <p>${errorMessageText}</p>
                               </div>
                           `
                         : nothing}
                 </ak-empty-state>
-                ${this.challenge?.flowInfo?.cancelUrl
-                    ? html`<fieldset class="pf-c-form__group pf-m-action">
-                          <legend class="sr-only">${msg("Form actions")}</legend>
-                          <a
-                              class="pf-c-button pf-m-primary pf-m-block"
-                              href=${this.challenge.flowInfo?.cancelUrl}
-                          >
-                              ${msg("Go back", {
-                                  id: "flow.navigation.go-back",
-                              })}
-                          </a>
-                      </fieldset>`
-                    : nothing}
+
+                ${isProfileIncomplete
+                    ? html`
+                          <fieldset class="pf-c-form__group pf-m-action">
+                              <legend class="sr-only">${msg("Form actions")}</legend>
+                              <a
+                                  class="pf-c-button pf-m-primary pf-m-block"
+                                  href="${globalAK().api.base}if/user/#/settings"
+                              >
+                                  ${msg("Go to profile settings")}
+                              </a>
+                              <a
+                                  class="pf-c-button pf-m-secondary pf-m-block"
+                                  href="${globalAK().api.base}if/user/#/library"
+                                  style="margin-top: 0.5rem;"
+                              >
+                                  ${msg("Go to library")}
+                              </a>
+                          </fieldset>
+                      `
+                    : this.challenge?.flowInfo?.cancelUrl
+                      ? html`
+                            <fieldset class="pf-c-form__group pf-m-action">
+                                <legend class="sr-only">${msg("Form actions")}</legend>
+                                <a
+                                    class="pf-c-button pf-m-primary pf-m-block"
+                                    href=${this.challenge.flowInfo?.cancelUrl}
+                                >
+                                    ${msg("Go back", {
+                                        id: "flow.navigation.go-back",
+                                    })}
+                                </a>
+                            </fieldset>
+                        `
+                      : nothing}
             </form>
         </ak-flow-card>`;
     }
